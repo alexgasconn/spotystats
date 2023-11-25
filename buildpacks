@@ -1,0 +1,4 @@
+libblas3
+libblas-dev
+liblapack-dev
+libatlas-base-dev
