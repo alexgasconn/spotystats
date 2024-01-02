@@ -17,7 +17,7 @@ number_of_items = 10
 speed = 5  #del 1 al 10
 option = "minutes"    #minutes/total_reproductions
 taylor_only = False
-mix_tv = True
+mix_tv = False
 
 
 
@@ -29,13 +29,11 @@ def create_dataframe(user, taylor_only):
     for file_name in relevant_files:
         file_path = os.path.join(directory_path, file_name)
         df = pd.read_json(file_path)
+        if mix_tv:
+            df['master_metadata_track_name'] = df['master_metadata_track_name'].apply(lambda x: re.sub(r'\([^)]*\)', '', x).rstrip() if x and 'Version' in x else x)
+        
         df['master_metadata_track_name'] = df['master_metadata_track_name'].str.replace("Taylor's Version", 'TV')
         df['master_metadata_track_name'] = df['master_metadata_track_name'].str.replace("From The Vault", 'FTV')
-        # if mix_tv:
-        #     if "Version" in df['master_metadata_track_name']:
-        #         df['master_metadata_track_name'] = re.sub(r'\([^)]*\)', '', df['master_metadata_track_name']).rstrip()
-        #         df['master_metadata_track_name'] = re.sub(r'\([^)]*\)', '', df['master_metadata_track_name']).rstrip()
-
         df['ts'] = pd.to_datetime(df['ts'])
         dfs.append(df)
     df = pd.concat(dfs)
@@ -236,7 +234,7 @@ def update_number_of_items(value):
 
 def update_taylor_only():
     global taylor_only
-    taylor_only = taylor_only.get()
+    taylor_only = taylor_only
 
 
 
