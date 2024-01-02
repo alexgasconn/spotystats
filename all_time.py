@@ -103,7 +103,7 @@ def animate():
     if play_state and current_date_index < len(unique_dates):
         selected_date = pd.to_datetime(unique_dates[current_date_index]).date()
         date_var.set(str(selected_date))
-        update_plot(selected_date, colors_dict, user, tipo_data, option)
+        update_plot(selected_date, colors_dict, user, tipo_data, option, previous_days_var.get())
         current_date_index += 1
         app.after(update_interval, animate)
     else:
@@ -120,7 +120,6 @@ def toggle_animation():
         play_button.configure(text="Start")
         pause_index = current_date_index
 
-
 def date_changed(*args):
     global colors_dict, current_date_index
     selected_date = pd.to_datetime(date_var.get()).date()
@@ -128,10 +127,10 @@ def date_changed(*args):
         current_date_index = list(unique_dates).index(selected_date)
     except ValueError:
         print(f"Warning: Selected date {selected_date} is not in the data.")
-    update_plot(selected_date, colors_dict, user, tipo_data, option)
+    update_plot(selected_date, colors_dict, user, tipo_data, option, previous_days_var.get())
 
 
-def update_plot(selected_date, colors, user, tipo_data, option):
+def update_plot(selected_date, colors, user, tipo_data, option, show_previous_days):
     bars = None
 
     if tipo_data == "artists":
@@ -148,9 +147,15 @@ def update_plot(selected_date, colors, user, tipo_data, option):
         songs_until_date = top_songs_by_day[top_songs_by_day['ts'] <= selected_date]
         cumulative_data_songs = songs_until_date.groupby('master_metadata_track_name')[option].sum().reset_index()
         top_data_songs = cumulative_data_songs.nlargest(number_of_items, option).sort_values(by=option, ascending=True)
+    
+        if show_previous_days:
+            start_date = selected_date - pd.DateOffset(days=30)
+            top_data_songs = songs_until_date[songs_until_date['ts'] >= start_date]
 
 
     ax.clear()
+
+
         
 
     if tipo_data == "artists":
@@ -226,7 +231,7 @@ def update_options(*args):
     user = user_var.get()
     tipo_data = tipo_data_var.get()
     option = option_var.get()
-    update_plot(pd.to_datetime(unique_dates[current_date_index]).date(), colors_dict, user, tipo_data, option)
+    update_plot(pd.to_datetime(unique_dates[current_date_index]).date(), colors_dict, user, tipo_data, option, previous_days_var.get())
 
 def update_number_of_items(value):
     global number_of_items
@@ -289,6 +294,11 @@ play_button.pack(side="left", padx=10)
 #Add a Checkbutton for the Taylor Only option
 taylor_only_checkbox = ttk.Checkbutton(app, text="Only Taylor", variable=taylor_only, command=update_taylor_only)
 taylor_only_checkbox.pack(side="left", padx=10)
+
+# Después de la creación de taylor_only_checkbox, puedes agregar lo siguiente:
+previous_days_var = tk.BooleanVar(value=True)
+previous_days_checkbox = ttk.Checkbutton(app, text="Show Previous 30 Days", variable=previous_days_var)
+previous_days_checkbox.pack(side="left", padx=10)
 
 
 #Gets dataframe data
