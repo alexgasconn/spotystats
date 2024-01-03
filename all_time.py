@@ -9,9 +9,10 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import random
 import re
+import datetime
 
 
-user = "alex" #alex/mireia/carol
+user = "mireia" #alex/mireia/carol
 tipo_data = "songs" #artists/albums/songs
 number_of_items = 10
 speed = 5  #del 1 al 10
@@ -21,7 +22,7 @@ mix_tv = False
 
 
 
-def create_dataframe(user, taylor_only):
+def create_dataframe(user):
     directory_path = os.path.dirname(__file__) + f"\{user}"
     dfs = []
     all_files = os.listdir(directory_path)
@@ -42,7 +43,10 @@ def create_dataframe(user, taylor_only):
 
 def get_top_data(df, user, tipo, number, artist=None, album=None):
     if taylor_only:
-        df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
+        pass
+        # df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
+        # df = df[df['master_metadata_album_artist_name'] == 'Myke Towers']
+        # df = df[df['master_metadata_album_artist_name'] == 'Bad Bunny']
 
     grouped_data_artist = df.groupby([df['ts'].dt.date, 'master_metadata_album_artist_name', 'spotify_track_uri']).sum(numeric_only=True)['ms_played'].reset_index()
     grouped_data_album = df.groupby([df['ts'].dt.date, 'master_metadata_album_album_name', 'spotify_track_uri']).sum(numeric_only=True)['ms_played'].reset_index()
@@ -131,31 +135,31 @@ def date_changed(*args):
 
 
 def update_plot(selected_date, colors, user, tipo_data, option, show_previous_days):
-    bars = None
-
     if tipo_data == "artists":
         artists_until_date = top_artists_by_day[top_artists_by_day['ts'] <= selected_date]
+        if show_previous_days:
+            start_date = selected_date - pd.DateOffset(days=30)
+            artists_until_date = artists_until_date[artists_until_date['ts'] >= start_date]
         cumulative_data_artists = artists_until_date.groupby('master_metadata_album_artist_name')[option].sum().reset_index()
         top_data_artists = cumulative_data_artists.nlargest(number_of_items, option).sort_values(by=option, ascending=True)
 
     elif tipo_data == "albums":
         album_until_date = top_albums_by_day[top_albums_by_day['ts'] <= selected_date]
+        if show_previous_days:
+            start_date = selected_date - pd.DateOffset(days=30)
+            album_until_date = album_until_date[album_until_date['ts'] >= start_date]
         cumulative_data_albums = album_until_date.groupby('master_metadata_album_album_name')[option].sum().reset_index()
         top_data_albums = cumulative_data_albums.nlargest(number_of_items, option).sort_values(by=option, ascending=True)
 
     elif tipo_data == "songs":
         songs_until_date = top_songs_by_day[top_songs_by_day['ts'] <= selected_date]
-        cumulative_data_songs = songs_until_date.groupby('master_metadata_track_name')[option].sum().reset_index()
-        top_data_songs = cumulative_data_songs.nlargest(number_of_items, option).sort_values(by=option, ascending=True)
-    
         if show_previous_days:
             start_date = selected_date - pd.DateOffset(days=30)
-            top_data_songs = songs_until_date[songs_until_date['ts'] >= start_date]
-
+            songs_until_date = songs_until_date[songs_until_date['ts'] >= start_date]
+        cumulative_data_songs = songs_until_date.groupby('master_metadata_track_name')[option].sum().reset_index()
+        top_data_songs = cumulative_data_songs.nlargest(number_of_items, option).sort_values(by=option, ascending=True)
 
     ax.clear()
-
-
         
 
     if tipo_data == "artists":
@@ -261,30 +265,30 @@ play_state = tk.BooleanVar(value=False)
 
 
 #Dropdown para la variable "user"
-user_var = tk.StringVar(value=user)
+user_var = tk.StringVar(value="mireia")
 user_options = ["alex", "mireia", "carol"]
 user_dropdown = tk.OptionMenu(app, user_var, *user_options, command=update_options)
 user_dropdown.pack(side="left", padx=10)
 
 #Dropdown para la variable "tipo_data"
-tipo_data_var = tk.StringVar(value=tipo_data)
+tipo_data_var = tk.StringVar(value="songs")
 tipo_data_options = ["artists", "albums", "songs"]
 tipo_data_dropdown = tk.OptionMenu(app, tipo_data_var, *tipo_data_options, command=update_options)
 tipo_data_dropdown.pack(side="left", padx=10)
 
 #Dropdown para la variable "option"
-option_var = tk.StringVar(value=option)
+option_var = tk.StringVar(value="minutes")
 option_options = ["minutes", "total_reproductions"]
 option_dropdown = tk.OptionMenu(app, option_var, *option_options, command=update_options)
 option_dropdown.pack(side="left", padx=10)
 
 #Barra desplazable para la variable "number_of_items"
-number_of_items_var = tk.StringVar(value=str(number_of_items))
+number_of_items_var = tk.StringVar(value=str(10))
 number_of_items_scale = tk.Scale(app, from_=1, to=50, orient="horizontal", variable=number_of_items_var, command=update_number_of_items, label=f"Number of {tipo_data}")
 number_of_items_scale.pack(side="left", padx=10)
 
 #Barra desplazable para la variable "speed"
-speed_var = tk.StringVar(value=str(speed))
+speed_var = tk.StringVar(value=str(5))
 speed_scale = tk.Scale(app, from_=1, to=10, orient="horizontal", variable=speed_var, command=update_speed, label="Speed")
 speed_scale.pack(side="left", padx=10)
 
@@ -292,6 +296,7 @@ play_button = ttk.Button(app, text="Start", command=toggle_animation)
 play_button.pack(side="left", padx=10)
 
 #Add a Checkbutton for the Taylor Only option
+taylor_only = tk.BooleanVar(value=False)
 taylor_only_checkbox = ttk.Checkbutton(app, text="Only Taylor", variable=taylor_only, command=update_taylor_only)
 taylor_only_checkbox.pack(side="left", padx=10)
 
@@ -301,14 +306,17 @@ previous_days_checkbox = ttk.Checkbutton(app, text="Show Previous 30 Days", vari
 previous_days_checkbox.pack(side="left", padx=10)
 
 
+
+
+
 #Gets dataframe data
-df = create_dataframe(user, taylor_only)
+df = create_dataframe(user)
 
 top_artists_by_day, top_albums_by_day, top_songs_by_day = get_top_data(df, user, tipo_data, number_of_items)
 
 colors_dict = assign_colors(top_artists_by_day, top_albums_by_day, top_songs_by_day)
 
-unique_dates = top_artists_by_day['ts'].unique()
+unique_dates = top_songs_by_day['ts'].unique()
 
 #Gets dates from the resulted dataframes
 date_var = tk.StringVar(value=str(unique_dates[0]))
@@ -318,3 +326,12 @@ date_var.trace_add("write", date_changed)
 
 #Ejecutar la interfaz gráfica
 tk.mainloop()
+
+
+
+#WARNING DE ERROR AL COMPARAR TIME STAMPS
+#SELECCIONAR QUIN ARTIRSTA CONCRET VOLS BUSCAR
+#SAME AMB ALBUM
+#MOURE INDICADOR PER NAVEGAR EN DATES COM A INDRA
+#TOTS ELS DATOS MENYS UN ARTISTA
+#GIRAR NOMS DE CANCÇONS ALBUMS I ARTISTES (ARA NOMES HI HA 1)
