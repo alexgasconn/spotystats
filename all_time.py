@@ -12,7 +12,7 @@ import re
 import datetime
 
 
-user = "mireia" #alex/mireia/carol
+user = "alex" #alex/mireia
 tipo_data = "songs" #artists/albums/songs
 number_of_items = 10
 speed = 5  #del 1 al 10
@@ -42,11 +42,17 @@ def create_dataframe(user):
 
 
 def get_top_data(df, user, tipo, number, artist=None, album=None):
-    if taylor_only:
-        pass
-        # df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
+    artist = artist_var.get() if artist_var.get() else None
+    album = album_var.get() if album_var.get() else None
+    # if taylor_only.get():
+    #     df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
         # df = df[df['master_metadata_album_artist_name'] == 'Myke Towers']
         # df = df[df['master_metadata_album_artist_name'] == 'Bad Bunny']
+
+    if artist:
+        df = df[df['master_metadata_album_artist_name'] == artist]
+    if album:
+        df = df[df['master_metadata_album_artist_name'] == album]
 
     grouped_data_artist = df.groupby([df['ts'].dt.date, 'master_metadata_album_artist_name', 'spotify_track_uri']).sum(numeric_only=True)['ms_played'].reset_index()
     grouped_data_album = df.groupby([df['ts'].dt.date, 'master_metadata_album_album_name', 'spotify_track_uri']).sum(numeric_only=True)['ms_played'].reset_index()
@@ -75,14 +81,31 @@ def get_top_data(df, user, tipo, number, artist=None, album=None):
     return top_artists_by_day, top_albums_by_day, top_songs_by_day
 
 def get_unique_items():
-    unique_artists = df['master_metadata_album_artist_name'].unique()
-    unique_albums = df['master_metadata_album_album_name'].unique()
-    unique_songs = df['master_metadata_track_name'].unique()
+    df1 = df.dropna(subset=['master_metadata_album_artist_name'])
+    df1 = df.dropna(subset=['master_metadata_album_album_name'])
+    df1 = df.dropna(subset=['master_metadata_track_name'])
+    unique_artists = sorted(df1['master_metadata_album_artist_name'].unique())
+    unique_albums = sorted(df1['master_metadata_album_album_name'].unique())
+    unique_songs = sorted(df1['master_metadata_track_name'].unique())
     unique_items = {
         'artists': unique_artists,
         'albums': unique_albums,
         'songs': unique_songs}
     return unique_items
+
+def total_minutes(df):
+    # Agrupar por canción y sumar los minutos reproducidos
+    total_minutes_per_artist = df.groupby('master_metadata_album_artist_name')['ms_played'].sum() / 60000
+    total_minutes_per_album = df.groupby('master_metadata_album_album_name')['ms_played'].sum() / 60000
+    total_minutes_per_song = df.groupby('master_metadata_track_name')['ms_played'].sum() / 60000
+
+    # Resetear el índice para obtener una nueva columna 'master_metadata_track_name'
+    total_minutes_per_artist = total_minutes_per_artist.reset_index()
+    total_minutes_per_album = total_minutes_per_album.reset_index()
+    total_minutes_per_song = total_minutes_per_song.reset_index()
+
+    return total_minutes_per_artist, total_minutes_per_album, total_minutes_per_song
+
 
 
 def set_delay(speed):
@@ -169,7 +192,7 @@ def update_plot(selected_date, colors, user, tipo_data, option, show_previous_da
         bars = ax.barh(top_data_albums['master_metadata_album_album_name'], top_data_albums[option], color=[colors[album] for album in top_data_albums['master_metadata_album_album_name']])
 
     elif tipo_data == "songs":
-        # top_data_songs['master_metadata_track_name'] = top_data_songs['master_metadata_track_name'].str.replace("Taylor's Version", 'TV')
+        top_data_songs['master_metadata_track_name'] = top_data_songs['master_metadata_track_name'].str.replace("Taylor's Version", 'TV')
         bars = ax.barh(top_data_songs['master_metadata_track_name'], top_data_songs[option], color=[colors[song] for song in top_data_songs['master_metadata_track_name']])
         plt.yticks(rotation=45)
 
@@ -265,7 +288,7 @@ play_state = tk.BooleanVar(value=False)
 
 
 #Dropdown para la variable "user"
-user_var = tk.StringVar(value="mireia")
+user_var = tk.StringVar(value="alex")
 user_options = ["alex", "mireia", "carol"]
 user_dropdown = tk.OptionMenu(app, user_var, *user_options, command=update_options)
 user_dropdown.pack(side="left", padx=10)
@@ -296,7 +319,7 @@ play_button = ttk.Button(app, text="Start", command=toggle_animation)
 play_button.pack(side="left", padx=10)
 
 #Add a Checkbutton for the Taylor Only option
-taylor_only = tk.BooleanVar(value=False)
+taylor_only = tk.BooleanVar(value=True)
 taylor_only_checkbox = ttk.Checkbutton(app, text="Only Taylor", variable=taylor_only, command=update_taylor_only)
 taylor_only_checkbox.pack(side="left", padx=10)
 
@@ -309,10 +332,24 @@ previous_days_checkbox.pack(side="left", padx=10)
 
 
 
+
+
 #Gets dataframe data
 df = create_dataframe(user)
+all_data = get_unique_items()
+all_artists = all_data["artists"]
+all_albums = all_data["albums"]
+total = total_minutes(df)
 
-top_artists_by_day, top_albums_by_day, top_songs_by_day = get_top_data(df, user, tipo_data, number_of_items)
+artist_var = tk.StringVar(value=None)
+artist_dropdown = tk.OptionMenu(app, artist_var, *all_artists)
+artist_dropdown.pack(side="right", padx=10)
+
+album_var = tk.StringVar(value=None)
+album_dropdown = tk.OptionMenu(app, album_var, *all_albums)
+album_dropdown.pack(side="right", padx=10)
+
+top_artists_by_day, top_albums_by_day, top_songs_by_day = get_top_data(df, user, tipo_data, number_of_items, artist_var, album_var)
 
 colors_dict = assign_colors(top_artists_by_day, top_albums_by_day, top_songs_by_day)
 
@@ -323,6 +360,9 @@ date_var = tk.StringVar(value=str(unique_dates[0]))
 date_dropdown = tk.OptionMenu(app, date_var, *unique_dates)
 date_dropdown.pack(side="right", padx=10)
 date_var.trace_add("write", date_changed)
+
+
+
 
 #Ejecutar la interfaz gráfica
 tk.mainloop()
