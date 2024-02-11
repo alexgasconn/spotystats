@@ -362,7 +362,19 @@ date_dropdown.pack(side="right", padx=10)
 date_var.trace_add("write", date_changed)
 
 
+def monthly_visualizations(df):
+    # Filtrar las reproducciones de Taylor Swift
+    taylor_df = df[df['master_metadata_album_artist_name'] == 'Bad Bunny']
+    
+    # Agrupar por mes y sumar los minutos reproducidos
+    monthly_data = taylor_df.groupby(taylor_df['ts'].dt.to_period('M'))['ms_played'].sum() # Convertir a minutos
+    
+    # Imprimir las visualizaciones mensuales
+    for month, minutes in monthly_data.items():
+        print(f"{month.to_timestamp().strftime('%B %Y')}: {minutes}")
 
+# Llamar a la función con el dataframe
+monthly_visualizations(df)
 
 #Ejecutar la interfaz gráfica
 tk.mainloop()
