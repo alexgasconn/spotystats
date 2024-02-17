@@ -9,7 +9,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import random
 import re
-import datetime
 
 
 user = "alex" #alex/mireia
@@ -288,19 +287,19 @@ play_state = tk.BooleanVar(value=False)
 
 
 #Dropdown para la variable "user"
-user_var = tk.StringVar(value="alex")
+user_var = tk.StringVar(value=user)
 user_options = ["alex", "mireia", "carol"]
 user_dropdown = tk.OptionMenu(app, user_var, *user_options, command=update_options)
 user_dropdown.pack(side="left", padx=10)
 
 #Dropdown para la variable "tipo_data"
-tipo_data_var = tk.StringVar(value="songs")
+tipo_data_var = tk.StringVar(value=tipo_data)
 tipo_data_options = ["artists", "albums", "songs"]
 tipo_data_dropdown = tk.OptionMenu(app, tipo_data_var, *tipo_data_options, command=update_options)
 tipo_data_dropdown.pack(side="left", padx=10)
 
 #Dropdown para la variable "option"
-option_var = tk.StringVar(value="minutes")
+option_var = tk.StringVar(value=option)
 option_options = ["minutes", "total_reproductions"]
 option_dropdown = tk.OptionMenu(app, option_var, *option_options, command=update_options)
 option_dropdown.pack(side="left", padx=10)
@@ -364,7 +363,7 @@ date_var.trace_add("write", date_changed)
 
 def monthly_visualizations(df):
     # Filtrar las reproducciones de Taylor Swift
-    taylor_df = df[df['master_metadata_album_artist_name'] == 'Bad Bunny']
+    taylor_df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
     
     # Agrupar por mes y sumar los minutos reproducidos
     monthly_data = taylor_df.groupby(taylor_df['ts'].dt.to_period('M'))['ms_played'].sum() # Convertir a minutos
