@@ -16,7 +16,7 @@ tipo_data = "songs" #artists/albums/songs
 number_of_items = 10
 speed = 5  #del 1 al 10
 option = "minutes"    #minutes/total_reproductions
-taylor_only = False
+taylor_only = True
 mix_tv = False
 
 
@@ -43,8 +43,9 @@ def create_dataframe(user):
 def get_top_data(df, user, tipo, number, artist=None, album=None):
     artist = artist_var.get() if artist_var.get() else None
     album = album_var.get() if album_var.get() else None
-    # if taylor_only.get():
-    #     df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
+    if taylor_only.get():
+        # df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
+        df = df[df['master_metadata_album_artist_name'] == 'Reputation']
         # df = df[df['master_metadata_album_artist_name'] == 'Myke Towers']
         # df = df[df['master_metadata_album_artist_name'] == 'Bad Bunny']
 
