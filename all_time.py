@@ -12,11 +12,11 @@ import re
 
 
 user = "alex" #alex/mireia
-tipo_data = "albums" #artists/albums/songs
+tipo_data = "songs" #artists/albums/songs
 number_of_items = 10
 speed = 2  #del 1 al 10
 option = "minutes"    #minutes/total_reproductions
-taylor_only = True
+taylor_only = False
 mix_tv = False
 
 
@@ -41,18 +41,26 @@ def create_dataframe(user):
 
 
 def get_top_data(df, user, tipo, number, artist=None, album=None):
+    start_date = pd.to_datetime("2024-01-01").tz_localize('UTC')
+    end_date = pd.to_datetime("2025-12-01").tz_localize('UTC')
+
+    df = df[(df['ts'] >= start_date) & (df['ts'] <= end_date)]
+
+
     artist = artist_var.get() if artist_var.get() else None
     album = album_var.get() if album_var.get() else None
     if taylor_only.get():
-        df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
-        # df = df[df['master_metadata_album_artist_name'] == 'Reputation']
+        pass
+        # df = df[df['master_metadata_album_artist_name'] == 'Taylor Swift']
         # df = df[df['master_metadata_album_artist_name'] == 'Myke Towers']
         # df = df[df['master_metadata_album_artist_name'] == 'Bad Bunny']
+        # df = df[df['master_metadata_album_album_name'] == "1989 (Taylor's Version)"]
+
 
     if artist:
         df = df[df['master_metadata_album_artist_name'] == artist]
     if album:
-        df = df[df['master_metadata_album_artist_name'] == album]
+        df = df[df['master_metadata_album_album_name'] == album]
 
     grouped_data_artist = df.groupby([df['ts'].dt.date, 'master_metadata_album_artist_name', 'spotify_track_uri']).sum(numeric_only=True)['ms_played'].reset_index()
     grouped_data_album = df.groupby([df['ts'].dt.date, 'master_metadata_album_album_name', 'spotify_track_uri']).sum(numeric_only=True)['ms_played'].reset_index()
